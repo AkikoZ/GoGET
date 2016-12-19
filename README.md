@@ -11,10 +11,7 @@ A simple HTTP Getter with **self-implemented** URL parsing, DNS resolution and H
 ## Installing
 1. Clone the git repository to your `$GOPATH`
 2. Modify the `import` in `labget.go` to match the absolute path of the `labnet` package in your `$GOPATH`
-3. Run the following command
-```
-go install LabGET/labget
-```
+3. Run the following command: `go install LabGET/labget`
 4. Get the executable `labget` in your `$GOPATH/bin`
 
 ## Usage
