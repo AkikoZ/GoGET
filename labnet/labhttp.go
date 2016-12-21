@@ -24,6 +24,8 @@ type URLComponents struct {
 	DomainName string
 	Port       string
 	URI        string
+	IPv4 net.IP
+	IPv6 net.IP
 }
 
 type HTTPRequest struct {
@@ -62,6 +64,35 @@ func ParseURL(rawInput string) (urlComponents *URLComponents, err error) {
 	return
 }
 
+func (urlComponents *URLComponents) RequestHTTP(cookie string) (response *HTTPResponse, err error) {
+	/* make request */
+	request := &HTTPRequest{DomainName: urlComponents.DomainName, Port: urlComponents.Port, URI: urlComponents.URI, Header: make(Header)}
+	request.SetDefaultHeader()
+	if cookie != "" {
+		request.Header["Cookie"] = cookie
+	}
+	
+	/* send request and get response */
+	// try IPv6 first
+	if urlComponents.IPv6 != nil {
+		response, err = request.sendTo(urlComponents.IPv6, urlComponents.Protocol == "https")
+		if err == nil {
+			return
+		}
+		fmt.Fprintf(os.Stderr, "[WARNING] Failed to get HTTP response from the IPv6 address: %s\n", err)
+	}
+	// if failed, fall back to IPv4
+	if urlComponents.IPv4 != nil {
+		response, err = request.sendTo(urlComponents.IPv4, urlComponents.Protocol == "https")
+		if err == nil {
+			return
+		}
+		fmt.Fprintf(os.Stderr, "[WARNING] Failed to get HTTP response from the IPv4 address: %s\n", err)
+	}
+	// both failed
+	return
+}
+
 func (header Header) String() string {
 	var s string
 	for key, value := range header {
@@ -72,6 +103,8 @@ func (header Header) String() string {
 
 func (request *HTTPRequest) SetDefaultHeader() {
 	request.Header["Host"] = request.DomainName + ":" + request.Port
+	request.Header["Accept"] = "*/*"
+	request.Header["Accept-Encoding"] = "gzip"
 	request.Header["Cache-Control"] = "no-cache"
 	request.Header["Connection"] = "close"
 }
@@ -85,11 +118,12 @@ func (response *HTTPResponse) String() string {
 	return response.Line + "\r\n" + response.Header.String() + "\r\n"
 }
 
-func (request *HTTPRequest) SendTo(ip net.IP, isTLS bool) (response *HTTPResponse, err error) {
+func (request *HTTPRequest) sendTo(ip net.IP, isTLS bool) (response *HTTPResponse, err error) {
 	/* dial TCP */
 	// get ip's string representation
 	var ipString string
-	if ipv4 := ip.To4(); ipv4 == nil {
+	isIPv6 := ip.To4() == nil
+	if isIPv6 {
 		ipString = "[" + ip.String() + "]"
 	} else {
 		ipString = ip.String()
@@ -186,18 +220,25 @@ func (request *HTTPRequest) SendTo(ip net.IP, isTLS bool) (response *HTTPRespons
 				}
 				// resolve DNS if needed
 				if urlComponents.DomainName != request.DomainName {
-					ip, err = urlComponents.ResolveDNS()
+					err = urlComponents.ResolveDNS()
 					if err != nil {
 						return
 					}
+					if urlComponents.IPv4 != nil {
+						fmt.Fprintf(os.Stderr, "[INFO] Resolved redirecting IPv4 address: %s\n", urlComponents.IPv4)
+					}
+					if urlComponents.IPv6 != nil {
+						fmt.Fprintf(os.Stderr, "[INFO] Resolved redirecting IPv6 address: %s\n", urlComponents.IPv6)
+					}
+				} else {
+					if isIPv6 {
+						urlComponents.IPv6 = ip
+					} else {
+						urlComponents.IPv4 = ip
+					}
 				}
-				// send new HTTP request
-				request := &HTTPRequest{DomainName: urlComponents.DomainName, Port: urlComponents.Port, URI: urlComponents.URI, Header: make(Header)}
-				request.SetDefaultHeader()
-				if cookie != "" {
-					request.Header["Cookie"] = cookie
-				}
-				response, err = request.SendTo(ip, urlComponents.Protocol == "https")
+				// make new HTTP request
+				response, err = urlComponents.RequestHTTP(cookie)
 				return
 			} else {
 				err = errors.New("bad response header")

@@ -33,7 +33,7 @@ type dnsResolutionResult struct {
 	err error
 }
 
-func (urlComponents *URLComponents) ResolveDNS() (ip net.IP, err error) {
+func (urlComponents *URLComponents) ResolveDNS() (err error) {
 	ipv4Result := &dnsResolutionResult{}
 	ipv6Result := &dnsResolutionResult{}
 	ipv4Complete := make(chan int)
@@ -45,7 +45,7 @@ func (urlComponents *URLComponents) ResolveDNS() (ip net.IP, err error) {
 		select {
 		case <-ipv4Complete:
 			if ipv4Result.err == nil {
-				ip = ipv4Result.ip
+				urlComponents.IPv4 = ipv4Result.ip
 				return
 			} else {
 				errCnt++
@@ -56,7 +56,7 @@ func (urlComponents *URLComponents) ResolveDNS() (ip net.IP, err error) {
 			}
 		case <-ipv6Complete:
 			if ipv6Result.err == nil {
-				ip = ipv6Result.ip
+				urlComponents.IPv6 = ipv6Result.ip
 				return
 			} else {
 				errCnt++

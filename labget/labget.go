@@ -24,16 +24,19 @@ func main() {
 	}
 
 	/* resolve DNS */
-	ip, err := urlComponents.ResolveDNS()
+	err = urlComponents.ResolveDNS()
 	if err != nil {
 		promptError("Failed to resolve DNS", err)
 	}
-	fmt.Fprintf(os.Stderr, "[INFO] Resolved IP address: %s\n", ip)
+	if urlComponents.IPv4 != nil {
+		fmt.Fprintf(os.Stderr, "[INFO] Resolved IPv4 address: %s\n", urlComponents.IPv4)
+	}
+	if urlComponents.IPv6 != nil {
+		fmt.Fprintf(os.Stderr, "[INFO] Resolved IPv6 address: %s\n", urlComponents.IPv6)
+	}
 
-	/* send HTTP request */
-	request := &labnet.HTTPRequest{DomainName: urlComponents.DomainName, Port: urlComponents.Port, URI: urlComponents.URI, Header: make(labnet.Header)}
-	request.SetDefaultHeader()
-	response, err := request.SendTo(ip, urlComponents.Protocol == "https")
+	/* make HTTP request */
+	response, err := urlComponents.RequestHTTP("")
 	if err != nil {
 		promptError("Failed to get HTTP response", err)
 	}
