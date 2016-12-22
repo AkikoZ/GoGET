@@ -28,40 +28,35 @@ type dnsQuestionProp struct {
 	qClass uint16
 }
 
-type dnsResolutionResult struct {
-	ip  net.IP
-	err error
-}
-
 func (urlComponents *URLComponents) ResolveDNS() (err error) {
-	ipv4Result := &dnsResolutionResult{}
-	ipv6Result := &dnsResolutionResult{}
 	ipv4Complete := make(chan int)
 	ipv6Complete := make(chan int)
 	errCnt := 0
-	go urlComponents.resolveDNS("ipv4", ipv4Result, ipv4Complete)
-	go urlComponents.resolveDNS("ipv6", ipv6Result, ipv6Complete)
+	var (
+		ipv4Err error
+		ipv6Err error
+	)
+	go urlComponents.resolveDNS("ipv4", &ipv4Err, ipv4Complete)
+	go urlComponents.resolveDNS("ipv6", &ipv6Err, ipv6Complete)
 	for {
 		select {
 		case <-ipv4Complete:
-			if ipv4Result.err == nil {
-				urlComponents.IPv4 = ipv4Result.ip
+			if ipv4Err == nil {
 				return
 			} else {
 				errCnt++
 				if errCnt == 2 {
-					err = fmt.Errorf("ipv4 error: %s, ipv6 error: %s", ipv4Result.err, ipv6Result.err)
+					err = fmt.Errorf("ipv4 error: %s, ipv6 error: %s", ipv4Err, ipv6Err)
 					return
 				}
 			}
 		case <-ipv6Complete:
-			if ipv6Result.err == nil {
-				urlComponents.IPv6 = ipv6Result.ip
+			if ipv6Err == nil {
 				return
 			} else {
 				errCnt++
 				if errCnt == 2 {
-					err = fmt.Errorf("ipv4 error: %s, ipv6 error: %s", ipv4Result.err, ipv6Result.err)
+					err = fmt.Errorf("ipv4 error: %s, ipv6 error: %s", ipv4Err, ipv6Err)
 					return
 				}
 			}
@@ -69,7 +64,7 @@ func (urlComponents *URLComponents) ResolveDNS() (err error) {
 	}
 }
 
-func (urlComponents *URLComponents) resolveDNS(protocol string, result *dnsResolutionResult, complete chan int) {
+func (urlComponents *URLComponents) resolveDNS(protocol string, errPtr *error, complete chan int) {
 	/* set query type */
 	var qType uint16
 	switch protocol {
@@ -90,7 +85,7 @@ func (urlComponents *URLComponents) resolveDNS(protocol string, result *dnsResol
 	/* dial UDP */
 	conn, err := net.DialTimeout("udp", DNS_RESOLVER, DNS_TIMEOUT)
 	if err != nil {
-		result.err = err
+		*errPtr = err
 		complete <- 0
 		return
 	}
@@ -104,7 +99,7 @@ func (urlComponents *URLComponents) resolveDNS(protocol string, result *dnsResol
 	querySize := len(buffer.Bytes())
 	_, err = conn.Write(buffer.Bytes())
 	if err != nil {
-		result.err = err
+		*errPtr = err
 		complete <- 0
 		return
 	}
@@ -113,7 +108,7 @@ func (urlComponents *URLComponents) resolveDNS(protocol string, result *dnsResol
 	rawResponse := make([]byte, 1024)
 	_, err = conn.Read(rawResponse)
 	if err != nil {
-		result.err = err
+		*errPtr = err
 		complete <- 0
 		return
 	}
@@ -121,7 +116,7 @@ func (urlComponents *URLComponents) resolveDNS(protocol string, result *dnsResol
 	var responseID uint16
 	binary.Read(bytes.NewBuffer(rawResponse[0:2]), binary.BigEndian, &responseID)
 	if responseID != queryID {
-		result.err = errors.New("invalid DNS response from server")
+		*errPtr = errors.New("invalid DNS response from server")
 		complete <- 0
 		return
 	}
@@ -129,7 +124,15 @@ func (urlComponents *URLComponents) resolveDNS(protocol string, result *dnsResol
 	var responseFlag uint16
 	binary.Read(bytes.NewBuffer(rawResponse[2:4]), binary.BigEndian, &responseFlag)
 	if responseFlag<<12 != 0 {
-		result.err = errors.New("server cannot resolve DNS")
+		*errPtr = errors.New("server cannot resolve DNS")
+		complete <- 0
+		return
+	}
+	// get answer count
+	var answerCount uint16
+	binary.Read(bytes.NewBuffer(rawResponse[6:8]), binary.BigEndian, &answerCount)
+	if answerCount == 0 {
+		*errPtr = fmt.Errorf("the host does not have an %s address", protocol)
 		complete <- 0
 		return
 	}
@@ -164,18 +167,18 @@ func (urlComponents *URLComponents) resolveDNS(protocol string, result *dnsResol
 		if aType == qType {
 			// get IP
 			if qType == 1 {
-				result.ip = net.IPv4(rawAnswer[10], rawAnswer[11], rawAnswer[12], rawAnswer[13])
+				urlComponents.IPv4 = net.IPv4(rawAnswer[10], rawAnswer[11], rawAnswer[12], rawAnswer[13])
 				complete <- 0
 			} else {
-				result.ip = make(net.IP, 16)
-				result.ip = net.IP(rawAnswer[10:26])
+				urlComponents.IPv6 = net.IP(rawAnswer[10:26])
 				complete <- 0
 			}
 			return
 		}
+		answerCount--
 		// get next answer (if exists)
-		if len(rawAnswer) < int(22+dataLength) {
-			result.err = fmt.Errorf("the host does not have an %s address", protocol)
+		if answerCount == 0 || len(rawAnswer) < int(22+dataLength) {
+			*errPtr = fmt.Errorf("the host does not have an %s address", protocol)
 			complete <- 0
 			return
 		}

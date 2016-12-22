@@ -24,8 +24,8 @@ type URLComponents struct {
 	DomainName string
 	Port       string
 	URI        string
-	IPv4 net.IP
-	IPv6 net.IP
+	IPv4       net.IP
+	IPv6       net.IP
 }
 
 type HTTPRequest struct {
@@ -71,7 +71,7 @@ func (urlComponents *URLComponents) RequestHTTP(cookie string) (response *HTTPRe
 	if cookie != "" {
 		request.Header["Cookie"] = cookie
 	}
-	
+
 	/* send request and get response */
 	// try IPv6 first
 	if urlComponents.IPv6 != nil {
@@ -193,7 +193,7 @@ func (request *HTTPRequest) sendTo(ip net.IP, isTLS bool) (response *HTTPRespons
 			}
 			// parse cookie (if exists)
 			if headerComponent[0] == "Set-Cookie" {
-				cookieComponents := strings.Split(headerComponent[1], "; ")
+				cookieComponents := strings.SplitAfter(headerComponent[1], "; ")
 				if len(cookieComponents) == 0 {
 					err = errors.New("bad response header")
 					return
@@ -201,6 +201,9 @@ func (request *HTTPRequest) sendTo(ip net.IP, isTLS bool) (response *HTTPRespons
 				cookie += cookieComponents[0]
 			}
 			response.Header[headerComponent[0]] = headerComponent[1]
+		}
+		if cookie != "" {
+			cookie = cookie[:len(cookie)-2]
 		}
 		if contentLength, ok := response.Header["Content-Length"]; ok {
 			if match, _ := regexp.MatchString(`^\d+$`, contentLength); !match {
