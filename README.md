@@ -7,6 +7,7 @@ A simple HTTP Getter with **self-implemented** URL parsing, DNS resolution and H
 * HTTP redirect following with cookie handled
 * Chunked HTTP response body supported
 * HTTP response body with gzip encoding supported
+* Multi-thread downloading large response bodies
 
 ## Installing
 1. Clone the git repository to your `$GOPATH`
@@ -22,7 +23,7 @@ labget http://www.test.com
 If there is no error, **labget** will print the received HTTP response body result to `stdout`. It will also print the resolved IP address and HTTP request/response header in `stderr`.
 If anything goes wrong, **labget** will leave `stdout` empty and send error message to `stderr`.
 
-## Liberaries used for main functions
+## Libraries used for main functions
 * Go's native TLS library
 * Go's native gzip library
 

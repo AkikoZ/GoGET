@@ -16,11 +16,7 @@ func main() {
 	/* parse URL */
 	urlComponents, err := labnet.ParseURL(os.Args[1])
 	if err != nil {
-		promptError("Cannot parse URL", err)
-	}
-	if urlComponents.Protocol != "http" && urlComponents.Protocol != "https" {
-		err = fmt.Errorf("protocol: %s not implemented", urlComponents.Protocol)
-		promptError("Protocol not implemented", err)
+		promptError("Failed to parse URL", err)
 	}
 
 	/* resolve DNS */
@@ -28,19 +24,12 @@ func main() {
 	if err != nil {
 		promptError("Failed to resolve DNS", err)
 	}
-	if urlComponents.IPv4 != nil {
-		fmt.Fprintf(os.Stderr, "[INFO] Resolved IPv4 address: %s\n", urlComponents.IPv4)
-	}
-	if urlComponents.IPv6 != nil {
-		fmt.Fprintf(os.Stderr, "[INFO] Resolved IPv6 address: %s\n", urlComponents.IPv6)
-	}
 
 	/* make HTTP request */
-	response, err := urlComponents.RequestHTTP("")
+	err = urlComponents.RequestHTTP("")
 	if err != nil {
 		promptError("Failed to get HTTP response", err)
 	}
-	fmt.Print(response.Body)
 }
 
 func promptError(message string, err error) {

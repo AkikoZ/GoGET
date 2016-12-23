@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"os"
 	"strings"
 	"time"
 )
@@ -168,9 +169,11 @@ func (urlComponents *URLComponents) resolveDNS(protocol string, errPtr *error, c
 			// get IP
 			if qType == 1 {
 				urlComponents.IPv4 = net.IPv4(rawAnswer[10], rawAnswer[11], rawAnswer[12], rawAnswer[13])
+				fmt.Fprintf(os.Stderr, "[INFO] Resolved IPv4 address: %s\n", urlComponents.IPv4)
 				complete <- 0
 			} else {
 				urlComponents.IPv6 = net.IP(rawAnswer[10:26])
+				fmt.Fprintf(os.Stderr, "[INFO] Resolved IPv6 address: %s\n", urlComponents.IPv6)
 				complete <- 0
 			}
 			return
@@ -199,4 +202,13 @@ func parseDomainName(domain string) []byte {
 	}
 	binary.Write(&buffer, binary.BigEndian, byte(0x00))
 	return buffer.Bytes()
+}
+
+func getDialString(ip net.IP) string {
+	isIPv6 := ip.To4() == nil
+	if isIPv6 {
+		return "[" + ip.String() + "]"
+	} else {
+		return ip.String()
+	}
 }
