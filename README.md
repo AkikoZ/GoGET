@@ -1,5 +1,6 @@
 # LabGET
 A simple HTTP Getter with **self-implemented** URL parsing, DNS resolution and HTTP GET request and response parsing.
+
 ## Functions
 * HTTP/HTTPS scheme with default or custom port
 * Concurrent DNS resolution for both IPv4 and IPv6 addresses
