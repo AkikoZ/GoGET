@@ -18,7 +18,7 @@ A simple HTTP Getter with **self-implemented** URL parsing, DNS resolution and H
 
 ## Usage
 **labget** accept only one argument, the URL:
-```
+```shell
 labget http://www.test.com
 ```
 If there is no error, **labget** will print the received HTTP response body result to `stdout`. It will also print the resolved IP address and HTTP request/response header in `stderr`.
