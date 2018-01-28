@@ -1,6 +1,6 @@
-# LabGET
+# GoGET
 
-A simple HTTP Getter with **self-implemented** URL parsing, DNS resolution and HTTP GET request and response parsing.
+A Go implementation of an HTTP Getter with **fully self-implemented** URL parsing, DNS resolution and HTTP GET request and response parsing **using only transport layer APIs**.
 
 ## Functions
 
@@ -15,20 +15,20 @@ A simple HTTP Getter with **self-implemented** URL parsing, DNS resolution and H
 ## Installing
 
 1. Clone the git repository to your `$GOPATH`
-1. Modify the `import` in **labget.go** to match the absolute path of the `labnet` package in your `$GOPATH`
-1. Run the following command: `go install LabGET/labget`
-1. Get the executable **labget** in your `$GOPATH/bin`
+1. Modify the `import` in **goget.go** to match the absolute path of the `gonet` package in your `$GOPATH`
+1. Run the following command: `go install GoGET/goget`
+1. Get the executable **goget** in your `$GOPATH/bin`
 
 ## Usage
 
-**labget** accept only one argument, the URL:
+**goget** accept only one argument, the URL:
 
 ```shell
-labget http://www.test.com
+goget http://www.test.com
 ```
 
-If there is no error, **labget** will print the received HTTP response body result to `stdout`. It will also print the resolved IP address and HTTP request/response header in `stderr`.
-If anything goes wrong, **labget** will leave `stdout` empty and send error message to `stderr`.
+If there is no error, **goget** will print the received HTTP response body result to `stdout`. It will also print the resolved IP address and HTTP request/response header in `stderr`.
+If anything goes wrong, **goget** will leave `stdout` empty and send error message to `stderr`.
 
 ## Libraries used for main functions
 

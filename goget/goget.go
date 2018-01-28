@@ -1,7 +1,7 @@
 package main
 
 import (
-	"Project/LabGET/src/labnet"
+	"Project/GoGET/src/gonet"
 	"fmt"
 	"os"
 )
@@ -14,7 +14,7 @@ func main() {
 	}
 
 	/* parse URL */
-	urlComponents, err := labnet.ParseURL(os.Args[1])
+	urlComponents, err := gonet.ParseURL(os.Args[1])
 	if err != nil {
 		promptError("Failed to parse URL", err)
 	}

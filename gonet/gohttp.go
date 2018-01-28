@@ -1,4 +1,4 @@
-package labnet
+package gonet
 
 import (
 	"bytes"
